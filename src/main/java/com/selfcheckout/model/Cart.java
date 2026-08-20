@@ -40,6 +40,18 @@ public class Cart {
         items.add(saleItem);
     }
 
+    public void removeItem(String uuid){
+        for (int i = 0; i < items.size(); i++){
+            SaleItem saleItem = items.get(i);
+
+            if (saleItem.getProduct().getUuid().equals(uuid)){
+                items.remove(saleItem);
+                return;
+            }
+        }
+
+    }
+
     public double calculateTotal(){
         this.total = 0;
         for (int i = 0; i < items.size(); i++){
@@ -53,7 +65,6 @@ public class Cart {
     public void clear(){
         items.clear();
     }
-
 
 
 }
