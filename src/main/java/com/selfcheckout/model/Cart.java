@@ -36,11 +36,23 @@ public class Cart {
                 return;
 
             }
-            items.add(saleItem);
-
         }
+        items.add(saleItem);
     }
 
+    public double calculateTotal(){
+        this.total = 0;
+        for (int i = 0; i < items.size(); i++){
+            SaleItem saleItem = items.get(i);
+            this.total += saleItem.getSubtotal();
+        }
+
+        return total;
+    }
+
+    public void clear(){
+        items.clear();
+    }
 
 
 
