@@ -5,6 +5,18 @@ public class Customer {
     private String name;
     private double balance;
 
+    public Customer(String uuid, String name){
+        this.uuid = uuid;
+        this.name = name;
+        this.balance = 0;
+    }
+
+    public Customer(String uuid, String name, double balance){
+        this.uuid = uuid;
+        this.name = name;
+        this.balance = balance;
+    }
+
     public String getUuid() {
         return uuid;
     }

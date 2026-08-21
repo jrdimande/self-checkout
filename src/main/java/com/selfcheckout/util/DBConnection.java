@@ -7,7 +7,7 @@ import java.sql.SQLException;
 public class DBConnection {
 
     private static final String URL =
-            "jdbc:mysql://192.168.10.44:3306/self_checkout";
+            "jdbc:mysql://10.0.19.149:3306/self_checkout";
 
     private static final String USER = "selfcheckout";
     private static final String PASSWORD = "senha123";
