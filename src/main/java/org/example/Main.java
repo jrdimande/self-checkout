@@ -1,17 +1,26 @@
 package org.example;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+import com.selfcheckout.dao.CustomerDAO;
+import com.selfcheckout.dao.ProductDAO;
+import com.selfcheckout.dao.SaleDAO;
+import com.selfcheckout.dao.SaleItemDAO;
+import com.selfcheckout.model.*;
+import com.selfcheckout.service.CheckoutService;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
-        }
+public class Main {
+
+    public static void main(String[] args) {
+        CheckoutService checkoutService = new CheckoutService();
+
+        checkoutService.startCheckout();
+        checkoutService.addItem("PROD003");
+        checkoutService.addItem("PROD001");
+        checkoutService.checkout("CUST001");
+        checkoutService.addItem("PROD001");
+
+        System.out.println(checkoutService.getTotal());
+
+
     }
+
 }

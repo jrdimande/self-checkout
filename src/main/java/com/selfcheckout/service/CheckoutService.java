@@ -36,6 +36,11 @@ public class CheckoutService {
         cart.removeItem(uuid);
     }
 
+    public double getTotal(){
+        cart.calculateTotal();
+        return cart.getTotal();
+    }
+
     public void checkout(String uuid){
         cart.calculateTotal();
 
@@ -57,6 +62,7 @@ public class CheckoutService {
 
         cart.clear();
         sale = null;
+        customer = null;
 
     }
 
