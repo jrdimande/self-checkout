@@ -26,8 +26,6 @@ public class MainView {
         initBottomPanel();
         initContentPanel();
 
-
-
         root.setVisible(true);
     }
 
