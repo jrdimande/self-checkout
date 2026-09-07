@@ -1,0 +1,21 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="180" rx="24" fill="#E11D48"></rect>
+  
+  
+  <g transform="translate(55, 30)">
+    
+    <rect x="10" y="5" width="50" height="85" rx="10" fill="white"></rect>
+    <rect x="18" y="15" width="34" height="55" rx="3" fill="#E11D48"></rect>
+    
+    
+    <circle cx="25" cy="80" r="3" fill="#E11D48"></circle>
+    <circle cx="35" cy="80" r="3" fill="#E11D48"></circle>
+    <circle cx="45" cy="80" r="3" fill="#E11D48"></circle>
+    
+    
+    <path d="M5 35 Q20 10 45 25 Q30 45 5 35" fill="#22C55E"></path>
+  </g>
+  
+  
+  <text x="90" y="155" font-family="Arial" font-size="26" font-weight="bold" fill="white" text-anchor="middle">m-pesa</text>
+</svg>

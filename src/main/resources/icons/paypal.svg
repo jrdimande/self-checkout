@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60" width="100" height="60">
+  <defs>
+    <linearGradient id="paypal-dark-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002970"/>
+      <stop offset="100%" stop-color="#001C4C"/>
+    </linearGradient>
+    <linearGradient id="paypal-light-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0079C1"/>
+      <stop offset="100%" stop-color="#00457C"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fundo do Card com estilo do tema -->
+  <rect width="100" height="60" rx="8" fill="#F0F4F8"/>
+  
+  <!-- Monograma Oficial 'PP' -->
+  <g transform="translate(32, 12) scale(0.95)">
+    <!-- 'P' Traseiro (Azul Escuro) -->
+    <path d="M 12.1 38 L 18.5 38 C 19.3 38 20 37.4 20.1 36.6 L 21.6 27 L 26.3 27 C 33.7 27 39.5 21 40.5 13.7 C 41.2 8.7 39.2 4.6 35.8 2.3 C 33 0.8 29.1 0 24.3 0 L 7.6 0 C 6.5 0 5.6 0.8 5.4 1.9 L 0 36.1 C -0.1 37.1 0.6 38 1.6 38 L 7.2 38 L 8.7 28.5 L 12.1 38 Z" fill="url(#paypal-dark-blue)"/>
+    
+    <!-- 'P' Dianteiro (Azul Claro) -->
+    <path d="M 20.3 12.5 C 20.4 11.7 21.1 11.1 21.9 11.1 L 30.6 11.1 C 33.4 11.1 35.8 11.6 37.6 12.7 C 38.6 9.8 38.3 7.1 36.8 5 C 34.6 2.2 30.3 1.1 24.3 1.1 L 11.8 1.1 C 10.7 1.1 9.8 1.9 9.6 3 L 4.2 37.2 C 4.1 38.2 4.8 39.1 5.8 39.1 L 11.4 39.1 L 14.8 17.5 L 20.3 12.5 Z" fill="url(#paypal-light-blue)" opacity="0.95"/>
+    
+    <!-- Sombra de sobreposição do 'P' -->
+    <path d="M 19.1 20.3 L 21.6 4.5 C 21.7 3.7 22.4 3.1 23.2 3.1 L 31.9 3.1 C 36.5 3.1 40.1 5.9 39.3 11.6 C 38.4 17.8 33.4 20.3 27.6 20.3 L 22.3 20.3 C 21.4 20.3 20.6 20.9 20.5 21.8 L 18 37.6 C 17.9 38.3 18.4 39 19.2 39 L 24.1 39 C 24.9 39 25.6 38.4 25.7 37.6 L 27.6 25.5 L 28.4 25.5 C 34.2 25.5 39.2 23 40.1 16.8 C 41 11 37.3 8.3 32.7 8.3 L 24.1 8.3 C 23.3 8.3 22.6 8.9 22.5 9.7 L 19.1 20.3 Z" fill="#002970" opacity="0.18"/>
+  </g>
+</svg>
