@@ -25,12 +25,16 @@ public class WelcomePanel extends JPanel {
         logoPanel.setPreferredSize(new Dimension(640, 620));
         logoPanel.setBackground(Color.decode("#FFFFFF"));
 
-        JPanel cartPanel = new JPanel();
+        JPanel cartPanel = new JPanel(new GridBagLayout());
         cartPanel.setBackground(Color.decode("#E3EDD3"));
         cartPanel.putClientProperty(FlatClientProperties.STYLE, "arc:360");
         cartPanel.setPreferredSize(new Dimension(300, 300));
         logoPanel.add(cartPanel);
 
+        FlatSVGIcon icon = new FlatSVGIcon("icons/cart.svg", 320, 320);
+
+        JLabel imageLabel = new JLabel(icon);
+        cartPanel.add(imageLabel);
 
 
 
@@ -76,12 +80,28 @@ public class WelcomePanel extends JPanel {
         gbc.gridy = 0;
         startPanel.add(textPanel, gbc);
 
-        JButton startButton = new JButton("Iniciar Compra");
+        FlatSVGIcon arrowIcon = new FlatSVGIcon("icons/arrow-right.svg", 30, 30);
+        arrowIcon.setColorFilter(new FlatSVGIcon.ColorFilter(color -> Color.WHITE));
+
+        JButton startButton = new JButton("iniciar compra");
+        startButton.setIcon(arrowIcon);
+        startButton.setHorizontalTextPosition(SwingConstants.LEFT);
+        startButton.setHorizontalAlignment(SwingConstants.CENTER);
+
+
+
+
+
+
+
+
         startButton.setBackground(Color.decode("#2D4A0F"));
         startButton.setForeground(Color.decode("#FFFFFF"));
         startButton.putClientProperty(FlatClientProperties.STYLE, "arc:16");
         startButton.setFont(new Font("Arial", Font.BOLD, 20));
         startButton.setPreferredSize(new Dimension(200, 70));
+
+
 
         gbc.gridx = 0;
         gbc.gridy = 1;
