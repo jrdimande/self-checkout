@@ -10,19 +10,19 @@ public class WelcomePanel extends JPanel {
     public WelcomePanel(){
         setLayout(new GridBagLayout());
         setOpaque(false);
-        setPreferredSize(new Dimension(1300, 650));
+        setPreferredSize(new Dimension(1300, 700));
         putClientProperty(FlatClientProperties.STYLE, "arc:16");
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(0, 25, 25, 0);
+        gbc.insets = new Insets(0, 25, 10, 0);
         JSeparator separator = new JSeparator(SwingConstants.VERTICAL);
 
 
         //  Panel 1
         logoPanel = new JPanel(new GridBagLayout());
         logoPanel.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        logoPanel.setPreferredSize(new Dimension(640, 620));
+        logoPanel.setPreferredSize(new Dimension(640, 700));
         logoPanel.setBackground(Color.decode("#FFFFFF"));
 
         JPanel cartPanel = new JPanel(new GridBagLayout());
@@ -37,32 +37,26 @@ public class WelcomePanel extends JPanel {
         cartPanel.add(imageLabel);
 
 
-
-
-
-
-
-
         // Panel 2
         startPanel = new JPanel(new GridBagLayout());
         startPanel.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        startPanel.setPreferredSize(new Dimension(640, 620));
+        startPanel.setPreferredSize(new Dimension(640, 700));
         startPanel.setBackground(Color.decode("#FFFFFF"));
 
         JPanel textPanel = new JPanel(new GridBagLayout());
         textPanel.setBackground(Color.decode("#FFFFFF"));
-        textPanel.setPreferredSize(new Dimension(560, 150));
+        textPanel.setPreferredSize(new Dimension(580, 300));
 
-        JLabel text1 = new JLabel("Bem-vindo(a)!");
+        JLabel text1 = new JLabel("Bem-vindo(a) !");
         text1.setForeground(Color.decode("#1F2A1A"));
-        text1.setFont(new Font("Arial", Font.BOLD, 45));
+        text1.setFont(new Font("Arial", Font.BOLD, 50));
 
         JLabel text2 = new JLabel(
                 "<html>Escaneie seus produtos e finalize<br>" +
                         "sua compra com facilidade</html>"
         );
         text2.setForeground(Color.decode("#5C6B57"));
-        text2.setFont(new Font("Arial", Font.BOLD, 20));
+        text2.setFont(new Font("Arial", Font.BOLD, 21));
 
         GridBagConstraints textGbc = new GridBagConstraints();
         textGbc.insets = new Insets(10,0,0,220);
@@ -87,21 +81,11 @@ public class WelcomePanel extends JPanel {
         startButton.setIcon(arrowIcon);
         startButton.setHorizontalTextPosition(SwingConstants.LEFT);
         startButton.setHorizontalAlignment(SwingConstants.CENTER);
-
-
-
-
-
-
-
-
         startButton.setBackground(Color.decode("#2D4A0F"));
         startButton.setForeground(Color.decode("#FFFFFF"));
         startButton.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        startButton.setFont(new Font("Arial", Font.BOLD, 20));
-        startButton.setPreferredSize(new Dimension(200, 70));
-
-
+        startButton.setFont(new Font("Arial", Font.BOLD, 25));
+        startButton.setPreferredSize(new Dimension(200, 80));
 
         gbc.gridx = 0;
         gbc.gridy = 1;
@@ -110,16 +94,13 @@ public class WelcomePanel extends JPanel {
         JButton cardButton = new JButton("Usar cartão fidelidade");
         cardButton.setForeground(Color.decode("#2E2E2E"));
         cardButton.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        cardButton.setFont(new Font("Arial", Font.BOLD, 20));
-        cardButton.setPreferredSize(new Dimension(200, 70));
+        cardButton.setFont(new Font("Arial", Font.BOLD, 25));
+        cardButton.setPreferredSize(new Dimension(200, 80));
 
 
         gbc.gridx = 0;
         gbc.gridy = 2;
         startPanel.add(cardButton, gbc);
-
-
-
 
 
         add(logoPanel);
