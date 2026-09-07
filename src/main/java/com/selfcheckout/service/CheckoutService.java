@@ -26,7 +26,20 @@ public class CheckoutService {
         cart.clear();
     }
 
+    public Product processRFID(String uid) {
+
+        Product product = productDAO.findByUuid(uid);
+
+        if (product == null) {
+            System.out.println("Produto não encontrado.");
+            return null;
+        }
+
+        return product;
+    }
+
     public void addItem(String uuid){
+        System.out.println("Esta aqui" + uuid);
         Product product = productDAO.findByUuid(uuid);
         SaleItem saleItem = new SaleItem(0, product);
         cart.addItem(saleItem);
@@ -54,7 +67,7 @@ public class CheckoutService {
 
         for (SaleItem saleItem : cart.getItems()){
             saleItem.setSale_id(saleId);
-            saleItemDAO.save(saleItem);
+
         }
 
 
