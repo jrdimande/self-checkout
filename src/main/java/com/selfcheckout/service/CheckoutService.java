@@ -34,6 +34,7 @@ public class CheckoutService {
             System.out.println("Produto não encontrado.");
             return null;
         }
+        addItem(uid);
 
         return product;
     }

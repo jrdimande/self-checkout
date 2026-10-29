@@ -5,25 +5,28 @@ import java.awt.*;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.selfcheckout.view.checkout.CheckoutPanel;
 import com.selfcheckout.view.payment.PaymentPanel;
-import com.selfcheckout.view.welcome.CheckoutPanel;
 import com.selfcheckout.view.welcome.WelcomePanel;
 
 public class MainView {
+
     private JFrame root;
     private JPanel topPanel;
     private JPanel bottomPanel;
     private JPanel contentPanel;
 
-    public MainView(){
+    public MainView() {
+
         root = new JFrame();
-        root.setBackground(Color.decode("#F1F5F9"));
+
         root.setTitle("self-checkout");
         root.setLayout(new BorderLayout(0, 10));
         root.setSize(1400, 900);
         root.setLocationRelativeTo(null);
+        root.setResizable(false);
+        root.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-        // Ensures the root content pane respects the soft gray background theme
         root.getContentPane().setBackground(Color.decode("#F1F5F9"));
 
         initTopPanel();
@@ -33,7 +36,8 @@ public class MainView {
         root.setVisible(true);
     }
 
-    public void initTopPanel(){
+    public void initTopPanel() {
+
         topPanel = new JPanel();
         topPanel.setPreferredSize(new Dimension(1500, 90));
         topPanel.setBackground(Color.decode("#FFFFFF"));
@@ -42,23 +46,27 @@ public class MainView {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(10, 15, 10, 15);
 
-        // Application Logo Icon Container
-        JPanel logoPanel = new JPanel();
-        logoPanel.putClientProperty(FlatClientProperties.STYLE, "arc:15");
-        logoPanel.setLayout(new GridBagLayout());
+        // Logótipo
+        JPanel logoPanel = new JPanel(new GridBagLayout());
+
+        logoPanel.putClientProperty(
+                FlatClientProperties.STYLE,
+                "arc:15"
+        );
+
         logoPanel.setBackground(Color.decode("#1E3A8A"));
-        logoPanel.setPreferredSize(new Dimension(55,50));
+        logoPanel.setPreferredSize(new Dimension(55, 50));
 
         JLabel logoLabel = new JLabel("SC");
-        logoLabel.setForeground(Color.decode("#FFFFFF"));
+        logoLabel.setForeground(Color.WHITE);
         logoLabel.setFont(new Font("Arial", Font.BOLD, 22));
+
         logoPanel.add(logoLabel);
 
-        // Brand Title Panel
-        JPanel textPanel = new JPanel();
-        textPanel.setBackground(Color.decode("#FFFFFF"));
-        textPanel.setLayout(new GridBagLayout());
-        textPanel.setPreferredSize(new Dimension(300, 30));
+        // Nome da aplicação
+        JPanel textPanel = new JPanel(new GridBagLayout());
+        textPanel.setBackground(Color.WHITE);
+        textPanel.setPreferredSize(new Dimension(350, 70));
 
         JLabel textLabel = new JLabel("self-checkout");
         textLabel.setForeground(Color.decode("#0F172A"));
@@ -69,14 +77,15 @@ public class MainView {
 
         topPanel.add(textPanel, BorderLayout.WEST);
 
-        // Terminal / Register Identification Number Indicator
+        // Número da caixa
         JPanel machinePanel = new JPanel(new GridBagLayout());
-        machinePanel.setBackground(Color.decode("#FFFFFF"));
-        machinePanel.setPreferredSize(new Dimension(100, 20));
+        machinePanel.setBackground(Color.WHITE);
+        machinePanel.setPreferredSize(new Dimension(150, 50));
 
         JLabel machineNumberLabel = new JLabel("Caixa 01");
         machineNumberLabel.setForeground(Color.decode("#64748B"));
         machineNumberLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
         machinePanel.add(machineNumberLabel);
 
         topPanel.add(machinePanel, BorderLayout.EAST);
@@ -84,41 +93,59 @@ public class MainView {
         root.add(topPanel, BorderLayout.NORTH);
     }
 
-    public void initBottomPanel(){
+    public void initBottomPanel() {
+
         bottomPanel = new JPanel(new GridBagLayout());
         bottomPanel.setPreferredSize(new Dimension(1500, 80));
-        bottomPanel.setBackground(Color.decode("#FFFFFF"));
+        bottomPanel.setBackground(Color.WHITE);
 
         GridBagConstraints gbc = new GridBagConstraints();
 
-        // Customer Support Prompt Banner
-        JLabel textLabel = new JLabel("precisa de ajuda? chame um atendente");
+        JLabel textLabel = new JLabel(
+                "Precisa de ajuda? Chame um atendente"
+        );
+
         textLabel.setForeground(Color.decode("#475569"));
         textLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+
         bottomPanel.add(textLabel, gbc);
 
         root.add(bottomPanel, BorderLayout.SOUTH);
     }
 
     public void initContentPanel() {
-        // CardLayout manager to switch seamlessly between application views/screens
+
         CardLayout cardLayout = new CardLayout();
+
         contentPanel = new JPanel(cardLayout);
-        contentPanel.setBackground(Color.decode("#FFFFFF"));
+        contentPanel.setBackground(Color.WHITE);
 
-        // Registering workflow views
-        contentPanel.add(new WelcomePanel(cardLayout, contentPanel), "WELCOME");
-        contentPanel.add(new CheckoutPanel(cardLayout, contentPanel), "CHECKOUT");
-        contentPanel.add(new PaymentPanel(cardLayout, contentPanel), "PAYMENT");
+        // Tela inicial
+        contentPanel.add(
+                new WelcomePanel(cardLayout, contentPanel),
+                "WELCOME"
+        );
 
-        // Set default initial view
+        // Tela de checkout
+        contentPanel.add(
+                new CheckoutPanel(cardLayout, contentPanel),
+                "CHECKOUT"
+        );
+
+        // Tela de pagamento
+        contentPanel.add(
+                new PaymentPanel(cardLayout, contentPanel),
+                "PAYMENT"
+        );
+
+        // Mostrar a tela inicial
         cardLayout.show(contentPanel, "WELCOME");
 
         root.add(contentPanel, BorderLayout.CENTER);
     }
 
     public static void main(String[] args) {
-        // Initialize FlatLaf modern UI look and feel
+
         FlatLightLaf.setup();
 
         SwingUtilities.invokeLater(() -> {

@@ -9,28 +9,65 @@ import java.util.List;
 
 public class ProductDAO {
 
+
     public Product findByUuid(String uuid) {
-        String sql = "SELECT uuid, name, price FROM product WHERE uuid = ?";
+
+        String sql = """
+        SELECT uuid, name, price
+        FROM product
+        WHERE UPPER(TRIM(uuid)) = UPPER(TRIM(?))
+        """;
+
+        System.out.println("========== PRODUCT DAO ==========");
+        System.out.println("UID recebido: [" + uuid + "]");
+        System.out.println("Comprimento do UID: " + uuid.length());
 
         try (Connection connection = DBConnection.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
 
+            System.out.println(
+                    "Base de dados: "
+                            + connection.getCatalog()
+            );
+
+            System.out.println(
+                    "Servidor MySQL: "
+                            + connection.getMetaData().getURL()
+            );
+
             ps.setString(1, uuid);
 
-            ResultSet rs = ps.executeQuery();
+            try (ResultSet rs = ps.executeQuery()) {
 
-            if (rs.next()) {
-                return new Product(
-                        rs.getString("uuid"),
-                        rs.getString("name"),
-                        rs.getDouble("price")
+                if (rs.next()) {
+
+                    Product product = new Product(
+                            rs.getString("uuid"),
+                            rs.getString("name"),
+                            rs.getDouble("price")
+                    );
+
+                    System.out.println("PRODUTO ENCONTRADO!");
+                    System.out.println("UUID na BD: [" + product.getUuid() + "]");
+                    System.out.println("Nome: " + product.getName());
+                    System.out.println("Preço: " + product.getPrice());
+                    System.out.println("=================================");
+
+                    return product;
+                }
+
+                System.out.println(
+                        "A consulta executou, mas não encontrou o produto."
                 );
             }
 
         } catch (SQLException e) {
+
+            System.err.println("ERRO SQL AO PROCURAR O PRODUTO:");
             e.printStackTrace();
         }
 
+        System.out.println("=================================");
         return null;
     }
 

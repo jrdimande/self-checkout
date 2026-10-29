@@ -25,7 +25,7 @@ public class WelcomePanel extends JPanel {
 
         logoPanel = new JPanel(new GridBagLayout());
         logoPanel.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        logoPanel.setPreferredSize(new Dimension(640, 700));
+        logoPanel.setPreferredSize(new Dimension(685, 700));
         logoPanel.setBackground(Color.decode("#FFFFFF"));
 
         JPanel cartPanel = new JPanel(new GridBagLayout());
@@ -40,7 +40,7 @@ public class WelcomePanel extends JPanel {
 
         startPanel = new JPanel(new GridBagLayout());
         startPanel.putClientProperty(FlatClientProperties.STYLE, "arc:16");
-        startPanel.setPreferredSize(new Dimension(640, 700));
+        startPanel.setPreferredSize(new Dimension(685, 700));
         startPanel.setBackground(Color.decode("#FFFFFF"));
 
         JPanel textPanel = new JPanel(new GridBagLayout());
