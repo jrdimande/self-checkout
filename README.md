@@ -19,7 +19,6 @@
   <img src="https://img.shields.io/badge/leitura-RFID-10B981?style=flat-square" alt="Leitura RFID">
   <img src="https://img.shields.io/badge/pagamento-m%C3%BAltiplos%20m%C3%A9todos-0EA5E9?style=flat-square" alt="Pagamento">
 </p>
-
 ---
 
 ## Índice
