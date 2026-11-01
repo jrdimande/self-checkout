@@ -2,27 +2,55 @@ package com.selfcheckout.view.payment;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
+import com.selfcheckout.service.CheckoutService;
+import com.selfcheckout.service.ArduinoBoard;
+
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PaymentPanel extends JPanel {
 
     private final Map<String, JPanel> optionCards = new HashMap<>();
     private final Map<String, JLabel> checkmarkLabels = new HashMap<>();
 
+    private final CheckoutService checkoutService;
+    private final Runnable onPaymentSuccess;
+    private final ArduinoBoard board;
+    private final AtomicBoolean processing = new AtomicBoolean(false);
+
+    // Sensor de presença + buzzer (na mesma placa do RFID)
+    private static final int ABSENCE_DELAY_MS = 8000;   // tempo sem ninguém até tocar o buzzer
+
+    private final Timer absenceTimer = new Timer(ABSENCE_DELAY_MS, e -> triggerAbsenceAlarm());
+    private volatile boolean paymentCompleted = false;
+    private boolean alarmActive = false;
+
     private JPanel dynamicActionContainer;
     private JTextField phoneInputField;
     private JLabel totalValueLabel;
+    private JLabel cardStatusLabel;
     private JButton processPaymentButton;
 
     private String selectedPaymentMethod = "MPESA";
 
-    public PaymentPanel(CardLayout cardLayout, JPanel contentPanel) {
+    public PaymentPanel(CardLayout cardLayout,
+                        JPanel contentPanel,
+                        CheckoutService checkoutService,
+                        ArduinoBoard board,
+                        Runnable onPaymentSuccess) {
+
+        this.checkoutService = checkoutService;
+        this.board = board;
+        this.onPaymentSuccess = onPaymentSuccess;
+
         setLayout(new GridBagLayout());
         setOpaque(false);
         setPreferredSize(new Dimension(1300, 700));
@@ -92,7 +120,7 @@ public class PaymentPanel extends JPanel {
         totalText.setFont(new Font("Arial", Font.BOLD, 20));
         totalText.setForeground(Color.decode("#1D4ED8"));
 
-        totalValueLabel = new JLabel("160,00 MT");
+        totalValueLabel = new JLabel("0,00 MT");
         totalValueLabel.setFont(new Font("Arial", Font.BOLD, 32));
         totalValueLabel.setForeground(Color.decode("#1E3A8A"));
 
@@ -141,6 +169,24 @@ public class PaymentPanel extends JPanel {
         gbc.gridx = 2;
         gbc.weightx = 0.53;
         add(summaryPanel, gbc);
+
+        // O leitor de cartão só funciona enquanto esta tela está visível
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                totalValueLabel.setText(
+                        String.format("%.2f MT", checkoutService.getTotal()));
+                processing.set(false);
+                selectMethod(selectedPaymentMethod);   // reinicia o leitor se for cartão
+                startPresenceMonitoring();
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+                board.setTagListener(null);
+                stopPresenceMonitoring();
+            }
+        });
 
         selectMethod("MPESA");
     }
@@ -238,6 +284,9 @@ public class PaymentPanel extends JPanel {
     }
 
     private void renderDynamicContent() {
+        // Desliga sempre a leitura de cartões ao trocar de método; só liga no cartão
+        board.setTagListener(null);
+
         dynamicActionContainer.removeAll();
 
         if (selectedPaymentMethod.equals("MPESA") || selectedPaymentMethod.equals("EMOLA")) {
@@ -248,6 +297,12 @@ public class PaymentPanel extends JPanel {
             dynamicActionContainer.add(buildCardPaymentPanel(), BorderLayout.CENTER);
             processPaymentButton.setText("Aguardando Leitura do Cartão...");
             processPaymentButton.setEnabled(false);
+
+            // Só lê o cartão com a tela visível
+            if (isShowing()) {
+                processing.set(false);
+                startCardReader();
+            }
         } else if (selectedPaymentMethod.equals("PAYPAL")) {
             dynamicActionContainer.add(buildPaypalQRPanel(), BorderLayout.CENTER);
             processPaymentButton.setText("Aguardando Confirmação Mobile...");
@@ -257,6 +312,130 @@ public class PaymentPanel extends JPanel {
         dynamicActionContainer.revalidate();
         dynamicActionContainer.repaint();
     }
+
+    // =====================================================
+    // LEITURA DO CARTÃO
+    // =====================================================
+
+    private void startCardReader() {
+        if (board.isConnected()) {
+            setCardStatus("Aproxime o cartão do leitor", "#6B7280");
+        } else {
+            setCardStatus("Leitor indisponível. Chame um atendente.", "#DC2626");
+        }
+
+        board.setTagListener(this::onCardRead);
+    }
+
+    private void setCardStatus(String msg, String hexColor) {
+        SwingUtilities.invokeLater(() -> {
+            if (cardStatusLabel != null) {
+                cardStatusLabel.setText(msg);
+                cardStatusLabel.setForeground(Color.decode(hexColor));
+            }
+        });
+    }
+
+    // Chamado pela thread do leitor
+    private void onCardRead(String uid) {
+        if (!processing.compareAndSet(false, true)) {
+            return;   // ignora leituras duplas
+        }
+
+        setCardStatus("A processar pagamento...", "#1D4ED8");
+
+        new SwingWorker<Boolean, Void>() {
+            @Override
+            protected Boolean doInBackground() {
+                return checkoutService.checkout(uid);   // acesso à BD fora da EDT
+            }
+
+            @Override
+            protected void done() {
+                boolean approved;
+
+                try {
+                    approved = get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    approved = false;
+                }
+
+                if (approved) {
+                    paymentCompleted = true;
+                    stopPresenceMonitoring();
+                    board.setTagListener(null);
+                    processPaymentButton.setText("Pagamento aprovado ✓");
+                    setCardStatus("Pagamento aprovado! Obrigado pela compra.", "#15803D");
+
+                    Timer timer = new Timer(2500, ev -> onPaymentSuccess.run());
+                    timer.setRepeats(false);
+                    timer.start();
+                } else {
+                    setCardStatus("Cartão recusado ou não reconhecido. Tente novamente.", "#DC2626");
+                    processing.set(false);   // permite nova tentativa
+                }
+            }
+        }.execute();
+    }
+
+    // =====================================================
+    // SENSOR DE PRESENÇA + BUZZER
+    // =====================================================
+
+    private void startPresenceMonitoring() {
+        paymentCompleted = false;
+        alarmActive = false;
+
+        absenceTimer.setRepeats(false);
+        absenceTimer.stop();
+
+        board.setPresenceListener(
+                present -> SwingUtilities.invokeLater(() -> onPresenceChanged(present))
+        );
+    }
+
+    // Executa na EDT
+    private void onPresenceChanged(boolean present) {
+        if (paymentCompleted) {
+            return;
+        }
+
+        if (present) {
+            // a pessoa voltou: cancela a contagem e desliga o buzzer
+            absenceTimer.stop();
+
+            if (alarmActive) {
+                alarmActive = false;
+                board.send("BUZZER:OFF");
+            }
+
+        } else if (!absenceTimer.isRunning() && !alarmActive) {
+            // ninguém à frente: começa a contar
+            absenceTimer.start();
+        }
+    }
+
+    // Chamado pelo Timer quando passa ABSENCE_DELAY_MS sem presença
+    private void triggerAbsenceAlarm() {
+        if (paymentCompleted) {
+            return;
+        }
+
+        alarmActive = true;
+        board.send("BUZZER:ON");
+    }
+
+    private void stopPresenceMonitoring() {
+        absenceTimer.stop();
+        board.send("BUZZER:OFF");
+        alarmActive = false;
+        board.setPresenceListener(null);
+    }
+
+    // =====================================================
+    // PAINÉIS DINÂMICOS
+    // =====================================================
 
     private JPanel buildMobileMoneyInputPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 15));
@@ -330,9 +509,9 @@ public class PaymentPanel extends JPanel {
         mainText.setFont(new Font("Arial", Font.BOLD, 22));
         mainText.setForeground(Color.decode("#111827"));
 
-        JLabel subText = new JLabel("Siga as instruções no terminal de pagamento ao lado");
-        subText.setFont(new Font("Arial", Font.PLAIN, 15));
-        subText.setForeground(Color.decode("#6B7280"));
+        cardStatusLabel = new JLabel("Aproxime o cartão do leitor");
+        cardStatusLabel.setFont(new Font("Arial", Font.PLAIN, 15));
+        cardStatusLabel.setForeground(Color.decode("#6B7280"));
 
         JProgressBar progress = new JProgressBar();
         progress.setIndeterminate(true);
@@ -340,7 +519,7 @@ public class PaymentPanel extends JPanel {
 
         panel.add(statusIcon, gbc);
         panel.add(mainText, gbc);
-        panel.add(subText, gbc);
+        panel.add(cardStatusLabel, gbc);
         panel.add(Box.createVerticalStrut(10), gbc);
         panel.add(progress, gbc);
 

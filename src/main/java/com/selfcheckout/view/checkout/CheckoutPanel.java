@@ -1,26 +1,25 @@
 package com.selfcheckout.view.checkout;
 
-import com.fazecast.jSerialComm.SerialPort;
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.selfcheckout.model.Product;
 import com.selfcheckout.service.CheckoutService;
+import com.selfcheckout.service.ArduinoBoard;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CheckoutPanel extends JPanel {
 
-    // Serviço de checkout
-    private final CheckoutService checkoutService = new CheckoutService();
+    // Serviço de checkout (partilhado com o PaymentPanel)
+    private final CheckoutService checkoutService;
 
     // Componentes da interface
     private DefaultTableModel tableModel;
@@ -37,21 +36,21 @@ public class CheckoutPanel extends JPanel {
     private final CardLayout cardLayout;
     private final JPanel contentPanel;
 
-    // Leitor RFID
-    private SerialPort serialPort;
-    private Thread rfidThread;
-    private volatile boolean reading = false;
-
-    private static final String RFID_PORT = "/dev/ttyACM0";
-    private static final int RFID_BAUD_RATE = 9600;
+    // Placa Arduino partilhada (RFID + sensor + buzzer)
+    private final ArduinoBoard board;
 
     // Identifica a linha associada a cada UID
     private final Map<String, Integer> productRows = new HashMap<>();
 
-    public CheckoutPanel(CardLayout cardLayout, JPanel contentPanel) {
+    public CheckoutPanel(CardLayout cardLayout,
+                         JPanel contentPanel,
+                         CheckoutService checkoutService,
+                         ArduinoBoard board) {
 
         this.cardLayout = cardLayout;
         this.contentPanel = contentPanel;
+        this.checkoutService = checkoutService;
+        this.board = board;
 
         setLayout(new GridBagLayout());
         setBackground(Color.WHITE);
@@ -67,7 +66,18 @@ public class CheckoutPanel extends JPanel {
 
         updateTotal();
 
-        startRFIDReader();
+        // O leitor só funciona enquanto esta tela está visível
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                startRFIDReader();
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e) {
+                stopRFIDReader();
+            }
+        });
     }
 
     // =====================================================
@@ -669,116 +679,28 @@ public class CheckoutPanel extends JPanel {
     // LEITOR RFID
     // =====================================================
 
-    private synchronized void startRFIDReader() {
+    private void startRFIDReader() {
 
-        if (reading) {
-            return;
+        if (board.isConnected()) {
+            updateStatus(
+                    "LEITOR ATIVO • PRONTO PARA ESCANEAR",
+                    Color.decode("#15803D")
+            );
+        } else {
+            updateStatus("Leitor RFID indisponível.", Color.RED);
         }
 
-        if (rfidThread != null && rfidThread.isAlive()) {
-            return;
-        }
+        board.setStatusListener((msg, ok) -> updateStatus(
+                msg,
+                ok ? Color.decode("#15803D") : Color.RED
+        ));
 
-        rfidThread = new Thread(() -> {
+        board.setTagListener(this::processScannedProduct);
+    }
 
-            try {
-
-                serialPort = SerialPort.getCommPort(RFID_PORT);
-
-                serialPort.setBaudRate(RFID_BAUD_RATE);
-                serialPort.setNumDataBits(8);
-                serialPort.setNumStopBits(SerialPort.ONE_STOP_BIT);
-                serialPort.setParity(SerialPort.NO_PARITY);
-
-                serialPort.setComPortTimeouts(
-                        SerialPort.TIMEOUT_READ_SEMI_BLOCKING,
-                        0,
-                        0
-                );
-
-                if (!serialPort.openPort()) {
-
-                    updateStatus(
-                            "Não foi possível abrir a porta RFID.",
-                            Color.RED
-                    );
-
-                    return;
-                }
-
-                reading = true;
-
-                updateStatus(
-                        "LEITOR ATIVO • PRONTO PARA ESCANEAR",
-                        Color.decode("#15803D")
-                );
-
-                try (
-                        BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(
-                                        serialPort.getInputStream(),
-                                        StandardCharsets.UTF_8
-                                )
-                        )
-                ) {
-
-                    String line;
-
-                    while (
-                            reading
-                                    && !Thread.currentThread().isInterrupted()
-                                    && (line = reader.readLine()) != null
-                    ) {
-
-                        line = line.trim();
-
-                        if (line.isEmpty()) {
-                            continue;
-                        }
-
-                        System.out.println("RFID recebido: " + line);
-
-                        if (line.equalsIgnoreCase(
-                                "SELF_CHECKOUT_PRONTO"
-                        )) {
-                            continue;
-                        }
-
-                        if (line.startsWith("TAG:")) {
-
-                            String uid = line.substring(4).trim();
-
-                            if (!uid.isEmpty()) {
-                                processScannedProduct(uid);
-                            }
-                        }
-                    }
-                }
-
-            } catch (Exception e) {
-
-                if (reading) {
-                    e.printStackTrace();
-
-                    updateStatus(
-                            "Erro na comunicação RFID.",
-                            Color.RED
-                    );
-                }
-
-            } finally {
-
-                reading = false;
-
-                if (serialPort != null && serialPort.isOpen()) {
-                    serialPort.closePort();
-                }
-            }
-
-        }, "RFID-Reader-Thread");
-
-        rfidThread.setDaemon(true);
-        rfidThread.start();
+    public void stopRFIDReader() {
+        board.setTagListener(null);
+        board.setStatusListener(null);
     }
 
     // =====================================================
@@ -933,8 +855,7 @@ public class CheckoutPanel extends JPanel {
             return;
         }
 
-        stopRFIDReader();
-
+        // O leitor é parado automaticamente em componentHidden
         cardLayout.show(contentPanel, "PAYMENT");
     }
 
@@ -956,7 +877,16 @@ public class CheckoutPanel extends JPanel {
             return;
         }
 
-        stopRFIDReader();
+        resetCart();
+
+        cardLayout.show(contentPanel, "WELCOME");
+    }
+
+    // =====================================================
+    // LIMPAR CARRINHO (cancelamento ou pagamento concluído)
+    // =====================================================
+
+    public void resetCart() {
 
         tableModel.setRowCount(0);
         productRows.clear();
@@ -964,24 +894,5 @@ public class CheckoutPanel extends JPanel {
         checkoutService.startCheckout();
 
         updateTotal();
-
-        cardLayout.show(contentPanel, "WELCOME");
-    }
-
-    // =====================================================
-    // PARAR LEITOR RFID
-    // =====================================================
-
-    public void stopRFIDReader() {
-
-        reading = false;
-
-        if (rfidThread != null) {
-            rfidThread.interrupt();
-        }
-
-        if (serialPort != null && serialPort.isOpen()) {
-            serialPort.closePort();
-        }
     }
 }

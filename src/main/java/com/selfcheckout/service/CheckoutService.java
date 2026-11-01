@@ -12,16 +12,16 @@ public class CheckoutService {
     private final PaymentService paymentService;
     private Sale sale;
 
-    public CheckoutService(){
+    public CheckoutService() {
         this.cart = new Cart();
         this.productDAO = new ProductDAO();
         this.customerDAO = new CustomerDAO();
         this.saleDAO = new SaleDAO();
         this.paymentService = new PaymentService();
-        this.saleItemDAO =  new SaleItemDAO();
+        this.saleItemDAO = new SaleItemDAO();
     }
 
-    public void startCheckout(){
+    public void startCheckout() {
         sale = new Sale();
         cart.clear();
     }
@@ -34,51 +34,69 @@ public class CheckoutService {
             System.out.println("Produto não encontrado.");
             return null;
         }
-        addItem(uid);
 
         return product;
     }
 
-    public void addItem(String uuid){
-        System.out.println("Esta aqui" + uuid);
+    public void addItem(String uuid) {
         Product product = productDAO.findByUuid(uuid);
+
+        if (product == null) {
+            return;
+        }
+
         SaleItem saleItem = new SaleItem(0, product);
         cart.addItem(saleItem);
     }
 
-    public void removeItem(String uuid){
+    public void removeItem(String uuid) {
         cart.removeItem(uuid);
     }
 
-    public double getTotal(){
+    public double getTotal() {
         cart.calculateTotal();
         return cart.getTotal();
     }
 
-    public void checkout(String uuid){
-        cart.calculateTotal();
+    /**
+     * Conclui a venda usando o cartão (UID) do cliente.
+     *
+     * @return true se a venda foi concluída com sucesso
+     */
+    public boolean checkout(String customerUuid) {
+        try {
+            if (sale == null || cart.getItems().isEmpty()) {
+                return false;
+            }
 
+            Customer customer = customerDAO.findByUuid(customerUuid);
 
-        Customer customer = customerDAO.findByUuid(uuid);
+            if (customer == null) {
+                return false;   // cartão não reconhecido
+            }
 
-        sale.setCustomer_uuid(customer.getUuid());
-        sale.setTotal(cart.getTotal());
+            cart.calculateTotal();
 
-        int saleId = saleDAO.save(sale);
+            sale.setCustomer_uuid(customer.getUuid());
+            sale.setTotal(cart.getTotal());
 
-        for (SaleItem saleItem : cart.getItems()){
-            saleItem.setSale_id(saleId);
+            int saleId = saleDAO.save(sale);
 
+            for (SaleItem saleItem : cart.getItems()) {
+                saleItem.setSale_id(saleId);
+                saleItemDAO.save(saleItem);   // grava os itens da venda
+            }
+
+            paymentService.savePayment(saleId, cart.getTotal(), "CARD");
+
+            cart.clear();
+            sale = null;
+
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-
-
-        paymentService.savePayment(saleId, cart.getTotal(), "CARD");
-
-        cart.clear();
-        sale = null;
-        customer = null;
-
     }
-
-
 }

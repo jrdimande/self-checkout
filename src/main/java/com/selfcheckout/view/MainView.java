@@ -5,6 +5,8 @@ import java.awt.*;
 
 import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.FlatLightLaf;
+import com.selfcheckout.service.ArduinoBoard;
+import com.selfcheckout.service.CheckoutService;
 import com.selfcheckout.view.checkout.CheckoutPanel;
 import com.selfcheckout.view.payment.PaymentPanel;
 import com.selfcheckout.view.welcome.WelcomePanel;
@@ -120,26 +122,46 @@ public class MainView {
         contentPanel = new JPanel(cardLayout);
         contentPanel.setBackground(Color.WHITE);
 
+        // Um único serviço partilhado por todas as telas
+        CheckoutService checkoutService = new CheckoutService();
+
+        // Uma única placa Arduino (RFID + sensor de presença + buzzer)
+        ArduinoBoard board = new ArduinoBoard("/dev/ttyACM0", 9600);
+
+        // Tela de checkout
+        CheckoutPanel checkoutPanel = new CheckoutPanel(
+                cardLayout,
+                contentPanel,
+                checkoutService,
+                board
+        );
+
+        // Tela de pagamento
+        PaymentPanel paymentPanel = new PaymentPanel(
+                cardLayout,
+                contentPanel,
+                checkoutService,
+                board,
+                () -> {
+                    checkoutPanel.resetCart();                 // novo carrinho vazio
+                    cardLayout.show(contentPanel, "WELCOME");  // volta ao início
+                }
+        );
+
         // Tela inicial
         contentPanel.add(
                 new WelcomePanel(cardLayout, contentPanel),
                 "WELCOME"
         );
 
-        // Tela de checkout
-        contentPanel.add(
-                new CheckoutPanel(cardLayout, contentPanel),
-                "CHECKOUT"
-        );
-
-        // Tela de pagamento
-        contentPanel.add(
-                new PaymentPanel(cardLayout, contentPanel),
-                "PAYMENT"
-        );
+        contentPanel.add(checkoutPanel, "CHECKOUT");
+        contentPanel.add(paymentPanel, "PAYMENT");
 
         // Mostrar a tela inicial
         cardLayout.show(contentPanel, "WELCOME");
+
+        // Abre a porta serial uma só vez (reconecta sozinha se falhar)
+        board.start();
 
         root.add(contentPanel, BorderLayout.CENTER);
     }
