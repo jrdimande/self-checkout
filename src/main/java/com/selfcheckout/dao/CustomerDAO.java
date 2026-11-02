@@ -44,4 +44,19 @@ public class CustomerDAO {
         return null;
 
     }
+
+    public void update(Customer customer){
+        String sql = "UPDATE customer SET balance = ? WHERE uuid = ?";
+
+        try(Connection connection = DBConnection.getConnection();
+        PreparedStatement ps = connection.prepareStatement(sql)){
+            ps.setDouble(1, customer.getBalance());
+            ps.setString(2, customer.getUuid());
+
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
