@@ -10,6 +10,7 @@ public class CheckoutService {
     private final SaleDAO saleDAO;
     private final SaleItemDAO saleItemDAO;
     private final PaymentService paymentService;
+    private final CustomerService customerService;
     private Sale sale;
 
     public CheckoutService() {
@@ -19,6 +20,7 @@ public class CheckoutService {
         this.saleDAO = new SaleDAO();
         this.paymentService = new PaymentService();
         this.saleItemDAO = new SaleItemDAO();
+        this.customerService = new CustomerService();
     }
 
     public void startCheckout() {
@@ -87,7 +89,10 @@ public class CheckoutService {
                 saleItemDAO.save(saleItem);   // grava os itens da venda
             }
 
+
             paymentService.savePayment(saleId, cart.getTotal(), "CARD");
+            customer.setBalance(customer.getBalance() - getTotal());
+            customerService.updateBalance(customer); // Atualizar saldo do cliente na base de dados
 
             cart.clear();
             sale = null;

@@ -13,14 +13,6 @@
   <img src="https://img.shields.io/badge/RFID-RC522-24292F?style=for-the-badge&logo=rss&logoColor=white" alt="RFID RC522">
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/estado-prot%C3%B3tipo-F59E0B?style=flat-square" alt="Estado: protótipo">
-  <img src="https://img.shields.io/badge/arquitetura-em%20camadas-6366F1?style=flat-square" alt="Arquitetura em camadas">
-  <img src="https://img.shields.io/badge/leitura-RFID-10B981?style=flat-square" alt="Leitura RFID">
-  <img src="https://img.shields.io/badge/pagamento-m%C3%BAltiplos%20m%C3%A9todos-0EA5E9?style=flat-square" alt="Pagamento">
-</p>
----
-
 ## Índice
 
 - [Sobre](#sobre)
