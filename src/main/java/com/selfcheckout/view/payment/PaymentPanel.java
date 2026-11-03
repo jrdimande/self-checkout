@@ -4,6 +4,8 @@ import com.formdev.flatlaf.FlatClientProperties;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 import com.selfcheckout.service.CheckoutService;
 import com.selfcheckout.service.ArduinoBoard;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,6 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PaymentPanel extends JPanel {
 
+    private static final Logger logger = LoggerFactory.getLogger(PaymentPanel.class);
+
     private final Map<String, JPanel> optionCards = new HashMap<>();
     private final Map<String, JLabel> checkmarkLabels = new HashMap<>();
 
@@ -27,7 +31,7 @@ public class PaymentPanel extends JPanel {
     private final AtomicBoolean processing = new AtomicBoolean(false);
 
     // Sensor de presença + buzzer (na mesma placa do RFID)
-    private static final int ABSENCE_DELAY_MS = 8000;   // tempo sem ninguém até tocar o buzzer
+    private static final int ABSENCE_DELAY_MS = 8000;
 
     private final Timer absenceTimer = new Timer(ABSENCE_DELAY_MS, e -> triggerAbsenceAlarm());
     private volatile boolean paymentCompleted = false;
@@ -46,6 +50,8 @@ public class PaymentPanel extends JPanel {
                         CheckoutService checkoutService,
                         ArduinoBoard board,
                         Runnable onPaymentSuccess) {
+
+        logger.info("Inicializando painel de pagamento.");
 
         this.checkoutService = checkoutService;
         this.board = board;
@@ -161,7 +167,11 @@ public class PaymentPanel extends JPanel {
         backButton.setForeground(Color.decode("#4B5563"));
         backButton.setPreferredSize(new Dimension(660, 50));
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backButton.addActionListener(e -> cardLayout.show(contentPanel, "CHECKOUT"));
+
+        backButton.addActionListener(e -> {
+            logger.info("Utilizador solicitou voltar ao checkout.");
+            cardLayout.show(contentPanel, "CHECKOUT");
+        });
 
         sumgbc.gridy = 3;
         summaryPanel.add(backButton, sumgbc);
@@ -172,38 +182,61 @@ public class PaymentPanel extends JPanel {
 
         // O leitor de cartão só funciona enquanto esta tela está visível
         addComponentListener(new ComponentAdapter() {
+
             @Override
             public void componentShown(ComponentEvent e) {
+
                 totalValueLabel.setText(
-                        String.format("%.2f MT", checkoutService.getTotal()));
+                        String.format("%.2f MT", checkoutService.getTotal())
+                );
+
+                logger.info(
+                        "Painel de pagamento apresentado. Total: {} MT",
+                        checkoutService.getTotal()
+                );
+
                 processing.set(false);
-                selectMethod(selectedPaymentMethod);   // reinicia o leitor se for cartão
+
+                selectMethod(selectedPaymentMethod);
                 startPresenceMonitoring();
             }
 
             @Override
             public void componentHidden(ComponentEvent e) {
+
+                logger.info("Painel de pagamento ocultado.");
+
                 board.setTagListener(null);
                 stopPresenceMonitoring();
             }
         });
 
         selectMethod("MPESA");
+
+        logger.info("Painel de pagamento inicializado. Método predefinido: MPESA.");
     }
 
-    private JPanel createOptionCard(String key, String title, String description, String iconPath) {
+    private JPanel createOptionCard(
+            String key,
+            String title,
+            String description,
+            String iconPath) {
+
         JPanel card = createRoundedPanel(16, Color.decode("#F9FAFB"));
         card.setLayout(new BorderLayout(15, 0));
         card.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         JLabel iconLabel = new JLabel();
+
         Icon icon = loadIcon(iconPath, 44, 44);
+
         if (icon != null) {
             iconLabel.setIcon(icon);
         } else {
             iconLabel.setPreferredSize(new Dimension(44, 44));
         }
+
         card.add(iconLabel, BorderLayout.WEST);
 
         JPanel textContainer = new JPanel(new GridLayout(2, 1, 0, 3));
@@ -219,24 +252,31 @@ public class PaymentPanel extends JPanel {
 
         textContainer.add(methodTitle);
         textContainer.add(methodDesc);
+
         card.add(textContainer, BorderLayout.CENTER);
 
         JLabel checkmarkLabel = new JLabel("●");
         checkmarkLabel.setFont(new Font("Arial", Font.BOLD, 22));
         checkmarkLabel.setForeground(Color.decode("#D1D5DB"));
+
         card.add(checkmarkLabel, BorderLayout.EAST);
 
         optionCards.put(key, card);
         checkmarkLabels.put(key, checkmarkLabel);
 
         card.addMouseListener(new MouseAdapter() {
+
             @Override
             public void mouseClicked(MouseEvent e) {
+
+                logger.info("Método de pagamento seleccionado: {}", key);
+
                 selectMethod(key);
             }
 
             @Override
             public void mouseEntered(MouseEvent e) {
+
                 if (!selectedPaymentMethod.equals(key)) {
                     card.setBackground(Color.decode("#F3F4F6"));
                 }
@@ -244,6 +284,7 @@ public class PaymentPanel extends JPanel {
 
             @Override
             public void mouseExited(MouseEvent e) {
+
                 if (!selectedPaymentMethod.equals(key)) {
                     card.setBackground(Color.decode("#F9FAFB"));
                 }
@@ -254,57 +295,104 @@ public class PaymentPanel extends JPanel {
     }
 
     private void selectMethod(String method) {
+
+        logger.info("A alterar método de pagamento para: {}", method);
+
         this.selectedPaymentMethod = method;
+
         updateCardStyles();
         renderDynamicContent();
     }
 
     private void updateCardStyles() {
+
         optionCards.forEach((key, card) -> {
+
             boolean isSelected = key.equals(selectedPaymentMethod);
+
             JLabel checkmark = checkmarkLabels.get(key);
 
             if (isSelected) {
+
                 card.setBackground(Color.decode("#EFF6FF"));
-                card.putClientProperty(FlatClientProperties.STYLE, "arc:16; borderColor: #1E3A8A; borderWidth: 2;");
+
+                card.putClientProperty(
+                        FlatClientProperties.STYLE,
+                        "arc:16; borderColor: #1E3A8A; borderWidth: 2;"
+                );
+
                 if (checkmark != null) {
                     checkmark.setText("✓");
                     checkmark.setForeground(Color.decode("#1E3A8A"));
                 }
+
             } else {
+
                 card.setBackground(Color.decode("#F9FAFB"));
-                card.putClientProperty(FlatClientProperties.STYLE, "arc:16; borderColor: #E5E7EB; borderWidth: 1;");
+
+                card.putClientProperty(
+                        FlatClientProperties.STYLE,
+                        "arc:16; borderColor: #E5E7EB; borderWidth: 1;"
+                );
+
                 if (checkmark != null) {
                     checkmark.setText("○");
                     checkmark.setForeground(Color.decode("#9CA3AF"));
                 }
             }
+
             card.repaint();
         });
     }
 
     private void renderDynamicContent() {
-        // Desliga sempre a leitura de cartões ao trocar de método; só liga no cartão
+
+        logger.debug(
+                "A actualizar interface para o método: {}",
+                selectedPaymentMethod
+        );
+
+        // Desliga sempre a leitura de cartões ao trocar de método
         board.setTagListener(null);
 
         dynamicActionContainer.removeAll();
 
-        if (selectedPaymentMethod.equals("MPESA") || selectedPaymentMethod.equals("EMOLA")) {
-            dynamicActionContainer.add(buildMobileMoneyInputPanel(), BorderLayout.CENTER);
+        if (selectedPaymentMethod.equals("MPESA")
+                || selectedPaymentMethod.equals("EMOLA")) {
+
+            dynamicActionContainer.add(
+                    buildMobileMoneyInputPanel(),
+                    BorderLayout.CENTER
+            );
+
             processPaymentButton.setText("Enviar Pedido de Pagamento →");
             processPaymentButton.setEnabled(true);
+
         } else if (selectedPaymentMethod.equals("CARTAO")) {
-            dynamicActionContainer.add(buildCardPaymentPanel(), BorderLayout.CENTER);
+
+            dynamicActionContainer.add(
+                    buildCardPaymentPanel(),
+                    BorderLayout.CENTER
+            );
+
             processPaymentButton.setText("Aguardando Leitura do Cartão...");
             processPaymentButton.setEnabled(false);
 
             // Só lê o cartão com a tela visível
             if (isShowing()) {
+
                 processing.set(false);
+
                 startCardReader();
             }
+
         } else if (selectedPaymentMethod.equals("PAYPAL")) {
-            dynamicActionContainer.add(buildPaypalQRPanel(), BorderLayout.CENTER);
+
+            dynamicActionContainer.add(
+                    buildPaypalQRPanel(),
+                    BorderLayout.CENTER
+            );
+
             processPaymentButton.setText("Aguardando Confirmação Mobile...");
             processPaymentButton.setEnabled(false);
         }
@@ -318,18 +406,37 @@ public class PaymentPanel extends JPanel {
     // =====================================================
 
     private void startCardReader() {
+
+        logger.info("A iniciar leitor de cartões.");
+
         if (board.isConnected()) {
-            setCardStatus("Aproxime o cartão do leitor", "#6B7280");
+
+            logger.info("Leitor de cartões conectado e pronto.");
+
+            setCardStatus(
+                    "Aproxime o cartão do leitor",
+                    "#6B7280"
+            );
+
         } else {
-            setCardStatus("Leitor indisponível. Chame um atendente.", "#DC2626");
+
+            logger.warn("Leitor de cartões indisponível ou desconectado.");
+
+            setCardStatus(
+                    "Leitor indisponível. Chame um atendente.",
+                    "#DC2626"
+            );
         }
 
         board.setTagListener(this::onCardRead);
     }
 
     private void setCardStatus(String msg, String hexColor) {
+
         SwingUtilities.invokeLater(() -> {
+
             if (cardStatusLabel != null) {
+
                 cardStatusLabel.setText(msg);
                 cardStatusLabel.setForeground(Color.decode(hexColor));
             }
@@ -338,44 +445,99 @@ public class PaymentPanel extends JPanel {
 
     // Chamado pela thread do leitor
     private void onCardRead(String uid) {
+
         if (!processing.compareAndSet(false, true)) {
-            return;   // ignora leituras duplas
+
+            logger.debug(
+                    "Leitura duplicada ignorada enquanto existe um pagamento em processamento."
+            );
+
+            return;
         }
 
-        setCardStatus("A processar pagamento...", "#1D4ED8");
+        logger.info("Cartão detectado. A iniciar processamento do pagamento.");
+
+        setCardStatus(
+                "A processar pagamento...",
+                "#1D4ED8"
+        );
 
         new SwingWorker<Boolean, Void>() {
+
             @Override
             protected Boolean doInBackground() {
-                return checkoutService.checkout(uid);   // acesso à BD fora da EDT
+
+                logger.info(
+                        "A validar cartão e a processar pagamento na base de dados."
+                );
+
+                return checkoutService.checkout(uid);
             }
 
             @Override
             protected void done() {
+
                 boolean approved;
 
                 try {
+
                     approved = get();
+
                 } catch (Exception e) {
-                    e.printStackTrace();
+
+                    logger.error(
+                            "Erro durante o processamento do pagamento com cartão.",
+                            e
+                    );
+
                     approved = false;
                 }
 
                 if (approved) {
-                    paymentCompleted = true;
-                    stopPresenceMonitoring();
-                    board.setTagListener(null);
-                    processPaymentButton.setText("Pagamento aprovado ✓");
-                    setCardStatus("Pagamento aprovado! Obrigado pela compra.", "#15803D");
 
-                    Timer timer = new Timer(2500, ev -> onPaymentSuccess.run());
+                    logger.info(
+                            "Pagamento aprovado com sucesso. Total: {} MT",
+                            checkoutService.getTotal()
+                    );
+
+                    paymentCompleted = true;
+
+                    stopPresenceMonitoring();
+
+                    board.setTagListener(null);
+
+                    processPaymentButton.setText("Pagamento aprovado ✓");
+
+                    setCardStatus(
+                            "Pagamento aprovado! Obrigado pela compra.",
+                            "#15803D"
+                    );
+
+                    Timer timer = new Timer(2500, ev -> {
+
+                        logger.info("A executar acção de sucesso do pagamento.");
+
+                        onPaymentSuccess.run();
+                    });
+
                     timer.setRepeats(false);
                     timer.start();
+
                 } else {
-                    setCardStatus("Cartão recusado ou não reconhecido. Tente novamente.", "#DC2626");
-                    processing.set(false);   // permite nova tentativa
+
+                    logger.warn(
+                            "Pagamento recusado ou cartão não reconhecido."
+                    );
+
+                    setCardStatus(
+                            "Cartão recusado ou não reconhecido. Tente novamente.",
+                            "#DC2626"
+                    );
+
+                    processing.set(false);
                 }
             }
+
         }.execute();
     }
 
@@ -384,6 +546,9 @@ public class PaymentPanel extends JPanel {
     // =====================================================
 
     private void startPresenceMonitoring() {
+
+        logger.info("A iniciar monitorização do sensor de presença.");
+
         paymentCompleted = false;
         alarmActive = false;
 
@@ -391,46 +556,76 @@ public class PaymentPanel extends JPanel {
         absenceTimer.stop();
 
         board.setPresenceListener(
-                present -> SwingUtilities.invokeLater(() -> onPresenceChanged(present))
+                present -> SwingUtilities.invokeLater(
+                        () -> onPresenceChanged(present)
+                )
         );
     }
 
     // Executa na EDT
     private void onPresenceChanged(boolean present) {
+
         if (paymentCompleted) {
             return;
         }
 
         if (present) {
-            // a pessoa voltou: cancela a contagem e desliga o buzzer
+
+            // A pessoa voltou: cancela a contagem e desliga o buzzer
             absenceTimer.stop();
 
             if (alarmActive) {
+
+                logger.info(
+                        "Presença detectada novamente. A desligar buzzer."
+                );
+
                 alarmActive = false;
+
                 board.send("BUZZER:OFF");
             }
 
         } else if (!absenceTimer.isRunning() && !alarmActive) {
-            // ninguém à frente: começa a contar
+
+            // Ninguém à frente: começa a contar
+            logger.debug(
+                    "Ausência detectada. A iniciar temporizador de {} ms.",
+                    ABSENCE_DELAY_MS
+            );
+
             absenceTimer.start();
         }
     }
 
     // Chamado pelo Timer quando passa ABSENCE_DELAY_MS sem presença
     private void triggerAbsenceAlarm() {
+
         if (paymentCompleted) {
             return;
         }
 
         alarmActive = true;
+
+        logger.warn(
+                "Tempo de ausência excedido. A activar buzzer."
+        );
+
         board.send("BUZZER:ON");
     }
 
     private void stopPresenceMonitoring() {
+
+        logger.info("A parar monitorização do sensor de presença.");
+
         absenceTimer.stop();
+
         board.send("BUZZER:OFF");
+
         alarmActive = false;
+
         board.setPresenceListener(null);
+
+        logger.info("Monitorização do sensor de presença parada.");
     }
 
     // =====================================================
@@ -438,6 +633,7 @@ public class PaymentPanel extends JPanel {
     // =====================================================
 
     private JPanel buildMobileMoneyInputPanel() {
+
         JPanel panel = new JPanel(new BorderLayout(0, 15));
         panel.setOpaque(false);
 
@@ -448,10 +644,18 @@ public class PaymentPanel extends JPanel {
         label.setFont(new Font("Arial", Font.BOLD, 17));
         label.setForeground(Color.decode("#1F2937"));
 
-        phoneInputField = new JTextField(selectedPaymentMethod.equals("MPESA") ? "84 " : "86 ");
+        phoneInputField = new JTextField(
+                selectedPaymentMethod.equals("MPESA") ? "84 " : "86 "
+        );
+
         phoneInputField.setFont(new Font("Arial", Font.BOLD, 26));
         phoneInputField.setHorizontalAlignment(JTextField.CENTER);
-        phoneInputField.putClientProperty(FlatClientProperties.STYLE, "arc:12; background: #F9FAFB; borderWidth: 1; borderColor: #D1D5DB;");
+
+        phoneInputField.putClientProperty(
+                FlatClientProperties.STYLE,
+                "arc:12; background: #F9FAFB; borderWidth: 1; borderColor: #D1D5DB;"
+        );
+
         phoneInputField.setPreferredSize(new Dimension(300, 52));
 
         inputHeader.add(label, BorderLayout.NORTH);
@@ -462,24 +666,48 @@ public class PaymentPanel extends JPanel {
         JPanel keyPad = new JPanel(new GridLayout(4, 3, 8, 8));
         keyPad.setOpaque(false);
 
-        String[] keys = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "C", "0", "⌫"};
+        String[] keys = {
+                "1", "2", "3",
+                "4", "5", "6",
+                "7", "8", "9",
+                "C", "0", "⌫"
+        };
+
         for (String key : keys) {
+
             JButton btn = new JButton(key);
+
             btn.setFont(new Font("Arial", Font.BOLD, 22));
-            btn.putClientProperty(FlatClientProperties.STYLE, "arc:12; background: #FFFFFF; borderColor: #E5E7EB; borderWidth: 1;");
+
+            btn.putClientProperty(
+                    FlatClientProperties.STYLE,
+                    "arc:12; background: #FFFFFF; borderColor: #E5E7EB; borderWidth: 1;"
+            );
+
             btn.setFocusable(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
             btn.addActionListener(e -> {
+
                 String currentText = phoneInputField.getText();
+
                 if (key.equals("C")) {
+
                     phoneInputField.setText("");
+
                 } else if (key.equals("⌫")) {
+
                     if (!currentText.isEmpty()) {
-                        phoneInputField.setText(currentText.substring(0, currentText.length() - 1));
+
+                        phoneInputField.setText(
+                                currentText.substring(0, currentText.length() - 1)
+                        );
                     }
+
                 } else {
+
                     if (currentText.length() < 12) {
+
                         phoneInputField.setText(currentText + key);
                     }
                 }
@@ -489,21 +717,32 @@ public class PaymentPanel extends JPanel {
         }
 
         panel.add(keyPad, BorderLayout.CENTER);
+
         return panel;
     }
 
     private JPanel buildCardPaymentPanel() {
+
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
+
         gbc.gridx = 0;
         gbc.gridy = GridBagConstraints.RELATIVE;
         gbc.insets = new Insets(8, 8, 8, 8);
 
         JLabel statusIcon = new JLabel();
-        Icon icon = loadIcon("icons/mastercard.svg", 88, 88);
-        if (icon != null) statusIcon.setIcon(icon);
+
+        Icon icon = loadIcon(
+                "icons/mastercard.svg",
+                88,
+                88
+        );
+
+        if (icon != null) {
+            statusIcon.setIcon(icon);
+        }
 
         JLabel mainText = new JLabel("Aproxime ou Insira o Cartão");
         mainText.setFont(new Font("Arial", Font.BOLD, 22));
@@ -514,6 +753,7 @@ public class PaymentPanel extends JPanel {
         cardStatusLabel.setForeground(Color.decode("#6B7280"));
 
         JProgressBar progress = new JProgressBar();
+
         progress.setIndeterminate(true);
         progress.setPreferredSize(new Dimension(280, 8));
 
@@ -527,27 +767,44 @@ public class PaymentPanel extends JPanel {
     }
 
     private JPanel buildPaypalQRPanel() {
+
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
+
         gbc.gridx = 0;
         gbc.gridy = GridBagConstraints.RELATIVE;
         gbc.insets = new Insets(8, 8, 8, 8);
 
-        FlatSVGIcon qr = new FlatSVGIcon("icons/qrcode.svg", 170, 170);
+        FlatSVGIcon qr = new FlatSVGIcon(
+                "icons/qrcode.svg",
+                170,
+                170
+        );
+
         JLabel qrBox = new JLabel(qr);
+
         qrBox.setPreferredSize(new Dimension(170, 170));
         qrBox.setOpaque(true);
         qrBox.setBackground(Color.WHITE);
         qrBox.setHorizontalAlignment(SwingConstants.CENTER);
         qrBox.setFont(new Font("Arial", Font.BOLD, 16));
-        qrBox.setBorder(BorderFactory.createLineBorder(Color.decode("#D1D5DB"), 2));
+
+        qrBox.setBorder(
+                BorderFactory.createLineBorder(
+                        Color.decode("#D1D5DB"),
+                        2
+                )
+        );
 
         JLabel title = new JLabel("Digitalize com o App PayPal");
         title.setFont(new Font("Arial", Font.BOLD, 20));
 
-        JLabel info = new JLabel("O pagamento será confirmado automaticamente");
+        JLabel info = new JLabel(
+                "O pagamento será confirmado automaticamente"
+        );
+
         info.setFont(new Font("Arial", Font.PLAIN, 15));
         info.setForeground(Color.decode("#6B7280"));
 
@@ -559,36 +816,78 @@ public class PaymentPanel extends JPanel {
     }
 
     private JPanel createRoundedPanel(int cornerRadius, Color bgColor) {
+
         JPanel panel = new JPanel() {
+
             @Override
             protected void paintComponent(Graphics g) {
+
                 Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                g2.setRenderingHint(
+                        RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON
+                );
+
                 g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), cornerRadius, cornerRadius);
+
+                g2.fillRoundRect(
+                        0,
+                        0,
+                        getWidth(),
+                        getHeight(),
+                        cornerRadius,
+                        cornerRadius
+                );
+
                 g2.dispose();
             }
         };
+
         panel.setOpaque(false);
         panel.setBackground(bgColor);
+
         return panel;
     }
 
     private Icon loadIcon(String path, int width, int height) {
+
         try {
+
             if (path.toLowerCase().endsWith(".svg")) {
+
                 return new FlatSVGIcon(path, width, height);
+
             } else {
-                URL imgUrl = getClass().getClassLoader().getResource(path);
+
+                URL imgUrl = getClass()
+                        .getClassLoader()
+                        .getResource(path);
+
                 if (imgUrl != null) {
+
                     ImageIcon origIcon = new ImageIcon(imgUrl);
-                    Image scaledImg = origIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+
+                    Image scaledImg = origIcon.getImage()
+                            .getScaledInstance(
+                                    width,
+                                    height,
+                                    Image.SCALE_SMOOTH
+                            );
+
                     return new ImageIcon(scaledImg);
                 }
             }
+
         } catch (Exception e) {
-            e.printStackTrace();
+
+            logger.error(
+                    "Erro ao carregar ícone: {}",
+                    path,
+                    e
+            );
         }
+
         return null;
     }
 }

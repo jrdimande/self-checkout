@@ -6,6 +6,9 @@ import com.selfcheckout.model.Product;
 import com.selfcheckout.service.CheckoutService;
 import com.selfcheckout.service.ArduinoBoard;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -18,7 +21,10 @@ import java.util.Map;
 
 public class CheckoutPanel extends JPanel {
 
-    // Serviço de checkout (partilhado com o PaymentPanel)
+    private static final Logger logger =
+            LoggerFactory.getLogger(CheckoutPanel.class);
+
+    // Serviço de checkout
     private final CheckoutService checkoutService;
 
     // Componentes da interface
@@ -36,7 +42,7 @@ public class CheckoutPanel extends JPanel {
     private final CardLayout cardLayout;
     private final JPanel contentPanel;
 
-    // Placa Arduino partilhada (RFID + sensor + buzzer)
+    // Placa Arduino
     private final ArduinoBoard board;
 
     // Identifica a linha associada a cada UID
@@ -46,6 +52,8 @@ public class CheckoutPanel extends JPanel {
                          JPanel contentPanel,
                          CheckoutService checkoutService,
                          ArduinoBoard board) {
+
+        logger.info("Inicializando painel de checkout.");
 
         this.cardLayout = cardLayout;
         this.contentPanel = contentPanel;
@@ -62,19 +70,30 @@ public class CheckoutPanel extends JPanel {
 
         createInterface();
 
+        logger.info("Interface de checkout criada com sucesso.");
+
         checkoutService.startCheckout();
 
         updateTotal();
 
+        logger.info("Checkout preparado e pronto para receber produtos.");
+
         // O leitor só funciona enquanto esta tela está visível
         addComponentListener(new ComponentAdapter() {
+
             @Override
             public void componentShown(ComponentEvent e) {
+
+                logger.info("Painel de checkout apresentado.");
+
                 startRFIDReader();
             }
 
             @Override
             public void componentHidden(ComponentEvent e) {
+
+                logger.info("Painel de checkout ocultado.");
+
                 stopRFIDReader();
             }
         });
@@ -226,6 +245,8 @@ public class CheckoutPanel extends JPanel {
             svgCard.add(illustration);
 
         } catch (Exception e) {
+
+            logger.error("Erro ao carregar ilustração SVG do checkout.", e);
 
             JLabel fallback = new JLabel("LEITOR RFID");
 
@@ -681,24 +702,48 @@ public class CheckoutPanel extends JPanel {
 
     private void startRFIDReader() {
 
+        logger.info("Iniciando leitor RFID.");
+
         if (board.isConnected()) {
+
+            logger.info("Leitor RFID conectado e pronto para leitura.");
+
             updateStatus(
                     "LEITOR ATIVO • PRONTO PARA ESCANEAR",
                     Color.decode("#15803D")
             );
+
         } else {
-            updateStatus("Leitor RFID indisponível.", Color.RED);
+
+            logger.warn("Leitor RFID indisponível ou desconectado.");
+
+            updateStatus(
+                    "Leitor RFID indisponível.",
+                    Color.RED
+            );
         }
 
-        board.setStatusListener((msg, ok) -> updateStatus(
-                msg,
-                ok ? Color.decode("#15803D") : Color.RED
-        ));
+        board.setStatusListener((msg, ok) -> {
+
+            if (ok) {
+                logger.info("Estado do Arduino: {}", msg);
+            } else {
+                logger.warn("Problema na comunicação com Arduino: {}", msg);
+            }
+
+            updateStatus(
+                    msg,
+                    ok ? Color.decode("#15803D") : Color.RED
+            );
+        });
 
         board.setTagListener(this::processScannedProduct);
     }
 
     public void stopRFIDReader() {
+
+        logger.info("Desativando leitura RFID.");
+
         board.setTagListener(null);
         board.setStatusListener(null);
     }
@@ -713,9 +758,13 @@ public class CheckoutPanel extends JPanel {
 
             try {
 
+                logger.info("Etiqueta RFID recebida. Iniciando identificação do produto.");
+
                 Product product = checkoutService.processRFID(uid);
 
                 if (product == null) {
+
+                    logger.warn("Produto não encontrado na base de dados.");
 
                     updateStatus(
                             "Produto não encontrado: " + uid,
@@ -728,6 +777,12 @@ public class CheckoutPanel extends JPanel {
                 }
 
                 checkoutService.addItem(uid);
+
+                logger.info(
+                        "Produto adicionado ao carrinho: {} | Preço: {} MT",
+                        product.getName(),
+                        product.getPrice()
+                );
 
                 updateProductTable(product, uid);
 
@@ -742,7 +797,7 @@ public class CheckoutPanel extends JPanel {
 
             } catch (Exception e) {
 
-                e.printStackTrace();
+                logger.error("Erro ao processar produto lido pelo RFID.", e);
 
                 updateStatus(
                         "Erro ao adicionar produto.",
@@ -791,6 +846,11 @@ public class CheckoutPanel extends JPanel {
 
             productRows.put(uid, row);
         }
+
+        logger.debug(
+                "Tabela do carrinho atualizada para o produto: {}",
+                product.getName()
+        );
     }
 
     // =====================================================
@@ -819,6 +879,12 @@ public class CheckoutPanel extends JPanel {
         );
 
         payButton.setEnabled(total > 0);
+
+        logger.debug(
+                "Total do carrinho atualizado: {} MT | Quantidade de itens: {}",
+                total,
+                itemCount
+        );
     }
 
     // =====================================================
@@ -843,7 +909,11 @@ public class CheckoutPanel extends JPanel {
 
     private void continuePayment() {
 
+        logger.info("Utilizador solicitou a continuação para pagamento.");
+
         if (checkoutService.getTotal() <= 0) {
+
+            logger.warn("Tentativa de pagamento com carrinho vazio.");
 
             JOptionPane.showMessageDialog(
                     this,
@@ -855,6 +925,11 @@ public class CheckoutPanel extends JPanel {
             return;
         }
 
+        logger.info(
+                "Encaminhando compra para pagamento. Total: {} MT",
+                checkoutService.getTotal()
+        );
+
         // O leitor é parado automaticamente em componentHidden
         cardLayout.show(contentPanel, "PAYMENT");
     }
@@ -865,6 +940,8 @@ public class CheckoutPanel extends JPanel {
 
     private void cancelCheckout() {
 
+        logger.info("Utilizador solicitou cancelamento da compra.");
+
         int option = JOptionPane.showConfirmDialog(
                 this,
                 "Deseja cancelar a compra atual?",
@@ -874,8 +951,13 @@ public class CheckoutPanel extends JPanel {
         );
 
         if (option != JOptionPane.YES_OPTION) {
+
+            logger.info("Cancelamento da compra rejeitado pelo utilizador.");
+
             return;
         }
+
+        logger.warn("Compra cancelada pelo utilizador.");
 
         resetCart();
 
@@ -883,16 +965,21 @@ public class CheckoutPanel extends JPanel {
     }
 
     // =====================================================
-    // LIMPAR CARRINHO (cancelamento ou pagamento concluído)
+    // LIMPAR CARRINHO
     // =====================================================
 
     public void resetCart() {
 
+        logger.info("Limpando carrinho de compras.");
+
         tableModel.setRowCount(0);
+
         productRows.clear();
 
         checkoutService.startCheckout();
 
         updateTotal();
+
+        logger.info("Carrinho limpo e novo checkout iniciado.");
     }
 }
